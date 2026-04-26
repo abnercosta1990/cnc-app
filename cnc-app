@@ -1,39 +1,467 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calculator, ClipboardList, Home, Lock, Save, Settings, Smartphone, UserPlus } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react'
 
-const DEFAULT_USERS = [
-  { username: 'admin', password: '@2391375()', role: 'admin', canModify: true, active: true },
-  { username: 'operador', password: '1234', role: 'usar', canModify: false, active: true },
-  { username: 'cliente', password: '5678', role: 'usar', canModify: false, active: true },
-];
+const toNumber = (value) => {
+  const parsed = parseFloat(String(value ?? '').replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const formatNumber = (value, digits = 4) => (Number.isFinite(value) ? value.toFixed(digits) : '0')
+
+const diameterOptions = Array.from({ length: 25 }, (_, index) => String(index + 1))
 
 const materials = [
-  { name: 'Alumínio puro', kc: 300, mc: 0.25, fsAdaptive: 0.46 / 3, fsRough: 0.46 },
-  { name: 'Alumínio 6061', kc: 450, mc: 0.25, fsAdaptive: 0.69 / 3, fsRough: 0.69 },
-  { name: 'Alumínio 7075', kc: 600, mc: 0.25, fsAdaptive: 0.92 / 3, fsRough: 0.92 },
-  { name: 'Alumínio 7475', kc: 650, mc: 0.25, fsAdaptive: 1 / 3, fsRough: 1 },
-  { name: 'Magnésio', kc: 350, mc: 0.25, fsAdaptive: 0.53 / 3, fsRough: 0.53 },
-  { name: 'Latão', kc: 900, mc: 0.23, fsAdaptive: 1.38 / 3, fsRough: 1.38 },
-  { name: 'Bronze', kc: 950, mc: 0.23, fsAdaptive: 1.46 / 3, fsRough: 1.46 },
-  { name: 'Cobre', kc: 1000, mc: 0.23, fsAdaptive: 1.53 / 3, fsRough: 1.53 },
-  { name: 'Ferro fundido cinzento', kc: 1500, mc: 0.2, fsAdaptive: 2.3 / 3, fsRough: 2.3 },
-  { name: 'Ferro fundido nodular', kc: 1800, mc: 0.2, fsAdaptive: 2.76 / 3, fsRough: 2.76 },
-  { name: 'Aço baixo carbono', kc: 1800, mc: 0.22, fsAdaptive: 2.76 / 3, fsRough: 2.76 },
-  { name: 'Aço médio carbono', kc: 2100, mc: 0.22, fsAdaptive: 3.23 / 3, fsRough: 3.23 },
-  { name: 'Aço 1020', kc: 2000, mc: 0.22, fsAdaptive: 3.07 / 3, fsRough: 3.07 },
-  { name: 'Aço 1045', kc: 2200, mc: 0.22, fsAdaptive: 3.72 / 3, fsRough: 3.72 },
-  { name: 'Aço liga 4140', kc: 2500, mc: 0.22, fsAdaptive: 3.84 / 3, fsRough: 3.84 },
-  { name: 'Aço ferramenta', kc: 2800, mc: 0.2, fsAdaptive: 4.3 / 3, fsRough: 4.3 },
-  { name: 'Aço temperado 45HRC', kc: 3200, mc: 0.18, fsAdaptive: 4.92 / 3, fsRough: 4.92 },
-  { name: 'Aço temperado 60HRC', kc: 3800, mc: 0.18, fsAdaptive: 5.84 / 3, fsRough: 5.84 },
-  { name: 'Inox 304', kc: 2400, mc: 0.22, fsAdaptive: 3.69 / 3, fsRough: 3.69 },
+  ['Alumínio puro', 300, 0.25, 1, 1],
+  ['Alumínio 6061', 450, 0.25, 1, 1],
+  ['Alumínio 7075', 600, 0.25, 1, 1],
+  ['Alumínio 7475', 650, 0.25, 1, 1],
+  ['Magnésio', 350, 0.25, 1, 1],
+  ['Latão', 900, 0.23, 1, 1],
+  ['Bronze', 950, 0.23, 1, 1],
+  ['Cobre', 1000, 0.23, 1, 1],
+  ['Ferro fundido cinzento', 1500, 0.2, 1, 1],
+  ['Ferro fundido nodular', 1800, 0.2, 1, 1],
+  ['Aço baixo carbono', 1800, 0.22, 1, 1],
+  ['Aço médio carbono', 2100, 0.22, 1, 1],
+  ['Aço 1020', 2000, 0.22, 1, 1],
+  ['Aço 1045', 2200, 0.22, 1, 3.72],
+  ['Aço liga 4140', 2500, 0.22, 1, 1],
+  ['Aço ferramenta', 2800, 0.2, 1, 1],
+  ['Aço temperado 45HRC', 3200, 0.18, 1, 1],
+  ['Aço temperado 60HRC', 3800, 0.18, 1, 1],
+  ['Inox 304', 2400, 0.22, 1, 1],
+  ['Inox 316', 2600, 0.22, 1, 0.25],
+  ['Titânio Ti6Al4V', 3000, 0.2, 1, 1],
+  ['Nylon', 150, 0.3, 1, 1],
+  ['POM (Delrin)', 200, 0.3, 1, 1],
+  ['PTFE', 120, 0.3, 1, 1],
+  ['Acrílico', 180, 0.3, 1, 1],
+  ['MDF', 80, 0.35, 1, 1],
+  ['Madeira dura', 120, 0.35, 1, 1],
+]
+
+const defaults = {
+  modo: 'Topo',
+  material: 'Alumínio 7475',
+  diam: '16',
+  bal: '77',
+  rpm: '10000',
+  vf: '7500',
+  z: '3',
+  ae: '3.2',
+  ap: '32',
+  vc: '',
+  fz: '',
+  syncSource: '',
+}
+
+const AE_TABLE = {
+  1: { rpm: 144000, fz: 0.0125, vf: 5400, ap: 1.5, ae: 0.2 },
+  2: { rpm: 72000, fz: 0.025, vf: 5400, ap: 3, ae: 0.4 },
+  3: { rpm: 48000, fz: 0.0375, vf: 5400, ap: 4.5, ae: 0.6 },
+  4: { rpm: 36000, fz: 0.05, vf: 5400, ap: 6, ae: 0.8 },
+  5: { rpm: 28800, fz: 0.0625, vf: 5400, ap: 7.5, ae: 1 },
+  6: { rpm: 24000, fz: 0.075, vf: 5400, ap: 9, ae: 1.2 },
+  7: { rpm: 20571, fz: 0.0875, vf: 5400, ap: 10.5, ae: 1.4 },
+  8: { rpm: 18000, fz: 0.1, vf: 5400, ap: 12, ae: 1.6 },
+  9: { rpm: 16000, fz: 0.1125, vf: 5400, ap: 13.5, ae: 1.8 },
+  10: { rpm: 14400, fz: 0.125, vf: 5400, ap: 15, ae: 2 },
+  11: { rpm: 13091, fz: 0.1375, vf: 5400, ap: 16.5, ae: 2.2 },
+  12: { rpm: 12000, fz: 0.15, vf: 5400, ap: 18, ae: 2.4 },
+  13: { rpm: 11077, fz: 0.1625, vf: 5400, ap: 19.5, ae: 2.6 },
+  14: { rpm: 10286, fz: 0.175, vf: 5400, ap: 21, ae: 2.8 },
+  15: { rpm: 9600, fz: 0.1875, vf: 5400, ap: 22.5, ae: 3 },
+  16: { rpm: 10000, fz: 0.25, vf: 7500, ap: 32, ae: 3.2 },
+  17: { rpm: 8471, fz: 0.2, vf: 5083, ap: 25.5, ae: 3.4 },
+  18: { rpm: 8000, fz: 0.2, vf: 4800, ap: 27, ae: 3.6 },
+  19: { rpm: 7579, fz: 0.2, vf: 4547, ap: 28.5, ae: 3.8 },
+  20: { rpm: 7200, fz: 0.2, vf: 4320, ap: 30, ae: 4 },
+  21: { rpm: 6857, fz: 0.2, vf: 4114, ap: 31.5, ae: 4.2 },
+  22: { rpm: 6545, fz: 0.2, vf: 3927, ap: 33, ae: 4.4 },
+  23: { rpm: 6261, fz: 0.2, vf: 3757, ap: 34.5, ae: 4.6 },
+  24: { rpm: 6000, fz: 0.2, vf: 3600, ap: 36, ae: 4.8 },
+  25: { rpm: 5760, fz: 0.2, vf: 3456, ap: 37.5, ae: 5 },
+}
+
+function findMaterial(name) {
+  return materials.find((row) => row[0] === name) || materials.find((row) => row[0] === 'Alumínio 7475')
+}
+
+function apBandRef(diameter, band) {
+  const d = Number.isFinite(diameter) && diameter > 0 ? diameter : 0
+  if (d <= 0) return { ae: 0, ap: 0, fz: 0 }
+
+  if (band === 3) {
+    const rpm = 13000 * 10 / d
+    const vf = 3000 * d / 10
+    const z = 2
+    return { ae: d, ap: d * 0.45, fz: vf / (rpm * z) }
+  }
+  if (band === 4.5) {
+    const rpm = 13000 * 10 / d
+    const vf = 3000 * d / 10
+    const z = 2
+    return { ae: d, ap: d * 0.4, fz: vf / (rpm * z) }
+  }
+  if (band === 6) {
+    const rpm = 9000 * 12 / d
+    const vf = 2000 * d / 12
+    const z = 2
+    return { ae: d, ap: d * 0.25, fz: vf / (rpm * z) }
+  }
+  if (band === 7.5) {
+    const rpm = 8000 * 8 / d
+    const vf = 1000 * d / 8
+    const z = 2
+    return { ae: d, ap: d * 0.1, fz: vf / (rpm * z) }
+  }
+  const rpm = 8000 * 8 / d
+  const vf = 1000 * d / 8
+  const z = 2
+  return { ae: d, ap: d * 0.05, fz: vf / (rpm * z) }
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t
+}
+
+function apInterpolatedRef(diameter, ld) {
+  const d = Number.isFinite(diameter) && diameter > 0 ? diameter : 0
+  if (d <= 0 || !Number.isFinite(ld)) return { ae: 0, ap: 0, fz: 0 }
+  const pts = [3, 4.5, 6, 7.5, 9]
+  if (ld <= 3) return apBandRef(d, 3)
+  if (ld >= 9) return apBandRef(d, 9)
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i]
+    const b = pts[i + 1]
+    if (ld >= a && ld <= b) {
+      const left = apBandRef(d, a)
+      const right = apBandRef(d, b)
+      const t = (ld - a) / (b - a)
+      return { ae: lerp(left.ae, right.ae, t), ap: lerp(left.ap, right.ap, t), fz: lerp(left.fz, right.fz, t) }
+    }
+  }
+  return apBandRef(d, 3)
+}
+
+function aeRef(diameter) {
+  const d = Math.round(diameter)
+  if (!Number.isFinite(d) || d <= 0) return { ae: 0, ap: 0, fz: 0, rpm: 0, vf: 0 }
+  return AE_TABLE[d] || AE_TABLE[16]
+}
+
+function curvaDeflexao(valorLd) {
+  if (valorLd <= 3) return 1
+  if (valorLd <= 4.5) return 1 + ((valorLd - 3) / (4.5 - 3)) * 0.1
+  if (valorLd <= 6) return 1.1 + ((valorLd - 4.5) / (6 - 4.5)) * 0.15
+  if (valorLd <= 7.5) return 1.25 + ((valorLd - 6) / (7.5 - 6)) * 0.25
+  if (valorLd <= 9) return 1.5 + ((valorLd - 7.5) / (9 - 7.5)) * 0.3
+  return 1.8 + Math.min(1.2, (valorLd - 9) * 0.25)
+}
+
+function buildCalcBase(input) {
+  const B2 = input.modo || 'Topo'
+  const B3 = input.material
+  const B4 = toNumber(input.diam)
+  const B5 = toNumber(input.bal)
+  const B6 = toNumber(input.rpm)
+  const B7 = toNumber(input.vf)
+  const B8 = toNumber(input.z)
+  const B9 = toNumber(input.ae)
+  const B10 = toNumber(input.ap)
+
+  const materialRow = findMaterial(B3)
+  const B13 = Math.max(toNumber(materialRow?.[1]), 0)
+  const B14 = toNumber(materialRow?.[2]) || 0.25
+  const B12 = B13 === 650 ? 1 : B13 / 650
+
+  const B20 = B6 * B8 === 0 ? 0 : B7 / (B6 * B8)
+  const B21 = B4 > 0 ? B20 * Math.sqrt(B9 / B4) : 0
+  const B22 = B13 > 0 && B10 > 0 && B21 > 0 ? B13 * B10 * Math.pow(B21, 1 - B14) : 0
+  const B24 = B4 > 0 ? B5 / B4 : 0
+  const B25 = B4 > 0 && B5 > 0 ? (64 * B22 * Math.pow(B5, 3)) / (3 * 600000 * Math.PI * Math.pow(B4, 4)) : 0
+
+  const apRef = apInterpolatedRef(B4, B24)
+  const lateralRef = aeRef(B4)
+  let B26 = ''
+
+  if (B2 === 'Topo') {
+    if (apRef.ae > 0 && apRef.ap > 0 && apRef.fz > 0 && B20 > 0) {
+      B26 = B12 * 100 * (B9 / apRef.ae) * (B10 / apRef.ap) * (B20 / apRef.fz)
+    }
+  } else {
+    if (lateralRef.ae > 0 && lateralRef.ap > 0 && lateralRef.fz > 0 && B20 > 0) {
+      const ldReferencia = 77 / 16
+      const penalizacaoLD = curvaDeflexao(B24) / curvaDeflexao(ldReferencia)
+      const penalizacaoBalanco = Math.pow(Math.max(0.2, B5 / (16 * ldReferencia)), 1.2)
+      B26 = B12 * 100 * (B9 / lateralRef.ae) * (B10 / lateralRef.ap) * (B20 / lateralRef.fz) * penalizacaoLD * penalizacaoBalanco
+    }
+  }
+
+  const effort = Number.isFinite(B26) ? B26 : 0
+  const B18 = effort > 0 ? B25 / (effort / 100) : 0
+  const B23 = effort > 0 ? B22 / (effort / 100) : 0
+  const B28 = B22 * B4 / 2000
+
+  return {
+    esforco: effort,
+    deflexao: B25,
+    deflexaoLimite: B18,
+    forcorte: B22,
+    forcorteLimite: B23,
+    ld: B24,
+    torque: B28,
+    fzReal: B20,
+    hm: B21,
+    apRef,
+    lateralRef,
+  }
+}
+
+export default function CNCProMaxSite() {
+  const [logged, setLogged] = useState(false)
+  const [input, setInput] = useState(defaults)
+  const [login, setLogin] = useState({ user: '', pass: '' })
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  useEffect(() => {
+    const handler = (event) => {
+      event.preventDefault()
+      setInstallPrompt(event)
+    }
+
+    const installedHandler = () => {
+      setIsInstalled(true)
+      setInstallPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', installedHandler)
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', installedHandler)
+    }
+  }, [])
+
+  const installApp = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    await installPrompt.userChoice
+    setInstallPrompt(null)
+  }
+
+  const setField = (key, value) => {
+    const rawValue = String(value)
+    setInput((previous) => {
+      const next = { ...previous, [key]: rawValue }
+      const D = toNumber(key === 'diam' ? rawValue : next.diam)
+      const Z = toNumber(key === 'z' ? rawValue : next.z)
+      const N = toNumber(key === 'rpm' ? rawValue : next.rpm)
+      const VC = toNumber(key === 'vc' ? rawValue : next.vc)
+      const VF = toNumber(key === 'vf' ? rawValue : next.vf)
+      const FZ = toNumber(key === 'fz' ? rawValue : next.fz)
+
+      if (key === 'vc') {
+        next.syncSource = 'vc'
+        next.rpm = D > 0 && VC > 0 ? String(Math.round((VC * 1000) / (Math.PI * D))) : ''
+      }
+      if (key === 'rpm') {
+        next.syncSource = 'rpm'
+        next.vc = D > 0 && N > 0 ? ((N * Math.PI * D) / 1000).toFixed(1) : ''
+      }
+      if (key === 'diam') {
+        if (next.syncSource === 'vc') next.rpm = D > 0 && VC > 0 ? String(Math.round((VC * 1000) / (Math.PI * D))) : ''
+        if (next.syncSource === 'rpm') next.vc = D > 0 && N > 0 ? ((N * Math.PI * D) / 1000).toFixed(1) : ''
+      }
+
+      const finalRpm = toNumber(next.rpm)
+      const finalZ = toNumber(next.z)
+
+      if (key === 'vf') {
+        next.syncSource = 'vf'
+        next.fz = finalZ > 0 && finalRpm > 0 && VF > 0 ? (VF / (finalRpm * finalZ)).toFixed(5) : ''
+      }
+      if (key === 'fz') {
+        next.syncSource = 'fz'
+        next.vf = finalZ > 0 && finalRpm > 0 && FZ > 0 ? String(Math.round(FZ * finalRpm * finalZ)) : ''
+      }
+      if (['z', 'rpm', 'vc', 'diam'].includes(key)) {
+        if (next.syncSource === 'fz' && next.fz !== '' && finalRpm > 0 && finalZ > 0) next.vf = String(Math.round(toNumber(next.fz) * finalRpm * finalZ))
+        if (next.syncSource === 'vf' && next.vf !== '' && finalRpm > 0 && finalZ > 0) next.fz = (toNumber(next.vf) / (finalRpm * finalZ)).toFixed(5)
+      }
+      return next
+    })
+  }
+
+  const reset = () => setInput(prev => ({ ...prev, diam: '', bal: '', rpm: '', vf: '', z: '', ae: '', ap: '', vc: '', fz: '', syncSource: '' }))
+  const output = useMemo(() => buildCalcBase(input), [input])
+
+  if (!logged) {
+    return <LoginScreen login={login} setLogin={setLogin} onEnter={() => setLogged(true)} />
+  }
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#0c4a6e_0%,#09090b_35%,#050505_100%)] text-zinc-100">
+      <header className="sticky top-0 z-20 border-b border-sky-400/20 bg-zinc-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/20 text-xl font-black text-sky-300 ring-1 ring-sky-300/40">C</div>
+            <div>
+              <h1 className="text-xl font-black tracking-wide text-white">CNC PRO MAX</h1>
+              <p className="text-xs text-sky-300">Force Calculator • NX CAM Style</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isInstalled && (
+              <button onClick={installApp} className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-500">
+                Instalar app
+              </button>
+            )}
+            <button onClick={() => setLogged(false)} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-sky-400 hover:text-white">Sair</button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[1.05fr_1.3fr]">
+        <section className="rounded-3xl border border-zinc-700/80 bg-zinc-950/75 p-4 shadow-2xl shadow-black/40">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-sky-300">Entrada</h2>
+            <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-xs text-sky-200">Online</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField label="Modo de usinagem" value={input.modo} onChange={(v)=>setField('modo',v)} options={['Topo','Lateral']} />
+            <SelectField label="Material" value={input.material} onChange={(v)=>setField('material',v)} options={materials.map(row => row[0])} />
+            <SelectField label="Diâmetro D (mm)" value={input.diam} onChange={(v)=>setField('diam',v)} options={diameterOptions} allowBlank />
+            <InputField label="Balanço L (mm)" value={input.bal} onChange={(v)=>setField('bal',v)} />
+            <InputField label="RPM" value={input.rpm} onChange={(v)=>setField('rpm',v)} />
+            <InputField label="Vc (m/min)" value={input.vc} onChange={(v)=>setField('vc',v)} />
+            <InputField label="Número de cortes Z" value={input.z} onChange={(v)=>setField('z',v)} />
+            <InputField label="Avanço vf (mm/min)" value={input.vf} onChange={(v)=>setField('vf',v)} />
+            <InputField label="fz (mm/dente)" value={input.fz} onChange={(v)=>setField('fz',v)} />
+            <InputField label="ae (mm)" value={input.ae} onChange={(v)=>setField('ae',v)} />
+            <InputField label="ap (mm)" value={input.ap} onChange={(v)=>setField('ap',v)} />
+          </div>
+
+          <button onClick={reset} className="mt-4 w-full rounded-2xl bg-sky-600 p-3 font-bold text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500">Limpar campos</button>
+        </section>
+
+        <section className="space-y-4">
+          <div className="rounded-3xl border border-zinc-700/80 bg-zinc-950/75 p-5 shadow-2xl shadow-black/40">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-sky-300">Status força do corte</h2>
+              <span className={statusClass(output.esforco)}>{statusText(output.esforco)}</span>
+            </div>
+            <div className="text-center">
+              <div className="text-6xl font-black tracking-tight text-white">{formatNumber(output.esforco, 1)}%</div>
+              <p className="mt-1 text-sm text-zinc-400">Quanto maior a porcentagem, maior o risco da condição de corte.</p>
+            </div>
+            <div className="mt-5 h-6 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-zinc-700">
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, output.esforco))}%`, background: 'linear-gradient(90deg, #22c55e 0%, #84cc16 35%, #facc15 65%, #f97316 82%, #ef4444 100%)' }} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <ResultCard title="Deflexão" value={`${formatNumber(output.deflexao, 5)} mm`} />
+            <ResultCard title="Deflexão limite" value={`${formatNumber(output.deflexaoLimite, 5)} mm`} />
+            <ResultCard title="F corte" value={`${formatNumber(output.forcorte, 1)} N`} />
+            <ResultCard title="F corte limite" value={`${formatNumber(output.forcorteLimite, 1)} N`} />
+            <ResultCard title="L/D" value={formatNumber(output.ld, 2)} />
+            <ResultCard title="Torque" value={`${formatNumber(output.torque, 3)} N·m`} />
+          </div>
+
+          <div className="rounded-3xl border border-zinc-700 bg-zinc-950/70 p-4 text-sm text-zinc-300">
+            <h3 className="mb-2 font-bold text-sky-300">Referência interna usada</h3>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Info label="fz real" value={formatNumber(output.fzReal, 5)} />
+              <Info label="hm" value={formatNumber(output.hm, 5)} />
+              <Info label="Tabela" value={input.modo === 'Topo' ? 'ap / L-D' : 'ae / lateral'} />
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function LoginScreen({ login, setLogin, onEnter }) {
+  const canEnter = login.user.trim().length > 0 && login.pass.trim().length > 0
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#075985_0%,#09090b_42%,#030303_100%)] p-4 text-white">
+      <div className="w-full max-w-md rounded-[2rem] border border-sky-400/30 bg-zinc-950/85 p-7 shadow-2xl shadow-black/60 backdrop-blur-xl">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-sky-500/15 text-5xl font-black text-sky-300 ring-1 ring-sky-300/40">C</div>
+          <h1 className="text-4xl font-black tracking-tight">CNC PRO MAX</h1>
+          <p className="mt-2 text-sm text-sky-200">Force Calculator</p>
+        </div>
+
+        <div className="space-y-4">
+          <InputField label="Usuário" value={login.user} onChange={(v)=>setLogin({...login, user:v})} />
+          <InputField label="Senha" type="password" value={login.pass} onChange={(v)=>setLogin({...login, pass:v})} />
+          <button disabled={!canEnter} onClick={onEnter} className="w-full rounded-2xl bg-sky-600 p-3 font-bold text-white shadow-lg shadow-sky-900/50 disabled:cursor-not-allowed disabled:bg-zinc-700">Entrar no app</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InputField({ label, value, onChange, type = 'text' }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</span>
+      <input type={type} className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-3 py-3 text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20" value={value} onChange={e=>onChange(e.target.value)} />
+    </label>
+  )
+}
+
+function SelectField({ label, value, onChange, options, allowBlank = false }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</span>
+      <select className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-3 py-3 text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20" value={value} onChange={e=>onChange(e.target.value)}>
+        {allowBlank && <option value="">Selecione</option>}
+        {options.map(o=><option key={o} value={o}>{o}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function ResultCard({ title, value }) {
+  return (
+    <div className="rounded-3xl border border-zinc-700 bg-zinc-950/75 p-4 shadow-xl shadow-black/20">
+      <div className="text-xs font-semibold uppercase tracking-wide text-sky-300">{title}</div>
+      <div className="mt-2 text-xl font-black text-white">{value}</div>
+    </div>
+  )
+}
+
+function Info({ label, value }) {
+  return (
+    <div className="rounded-2xl bg-zinc-900 p-3">
+      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="font-bold text-white">{value}</div>
+    </div>
+  )
+}
+
+function statusText(value) {
+  if (value < 50) return 'LEVE'
+  if (value < 80) return 'MODERADO'
+  if (value < 100) return 'AGRESSIVO'
+  return 'RISCO'
+}
+
+function statusClass(value) {
+  if (value < 50) return 'rounded-full border border-green-400/40 bg-green-500/10 px-3 py-1 text-xs font-bold text-green-300'
+  if (value < 80) return 'rounded-full border border-yellow-400/40 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-300'
+  if (value < 100) return 'rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-300'
+  return 'rounded-full border border-red-400/40 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-300'
+}
   { name: 'Inox 316', kc: 2600, mc: 0.22, fsAdaptive: 4.4 / 3, fsRough: 4.4 },
   { name: 'Titânio Ti6Al4V', kc: 3000, mc: 0.2, fsAdaptive: 4.61 / 3, fsRough: 4.61 },
   { name: 'Nylon', kc: 150, mc: 0.3, fsAdaptive: 0.23 / 3, fsRough: 0.23 },
